@@ -228,11 +228,11 @@ class Task<T> {
 		var trigger = new Trigger<T>();
 
 		function future() {
-			var t = new haxe.Timer(Std.int(seconds * 1000));
-			t.run = function() {
-				t.stop();
-				trigger.pipeFrom(this);
-			};
+			#if (flash||js)
+			haxe.Timer.delay(trigger.pipeFrom.bind(this), Std.int(seconds * 1000));
+			#else
+			trigger.pipeFrom(this);
+			#end
 		}
 
 		return addContinuation(trigger.task, Execute.IMMEDIATELY, future);
