@@ -48,7 +48,6 @@ class Task<T> {
 	/**
 		Full handle: Task -> Task
 	**/
-
 	public function thenTask<R>(continuation:Task<T> -> Task<R>, ?execute:Execute):Task<R> {
 		if (continuation == null) throw "null argument";
 
@@ -224,12 +223,16 @@ class Task<T> {
 	}
 
 	public function delay(seconds:Float):Task<T> {
-		if (seconds < 0) throw "null argument";
+		if (seconds < 0) throw "invalid argument";
 
 		var trigger = new Trigger<T>();
 
 		function future() {
-			haxe.Timer.delay(trigger.pipeFrom.bind(this), Std.int(seconds * 1000));
+			var t = new haxe.Timer(Std.int(seconds * 1000));
+			t.run = function() {
+				t.stop();
+				trigger.pipeFrom(this);
+			};
 		}
 
 		return addContinuation(trigger.task, Execute.IMMEDIATELY, future);
