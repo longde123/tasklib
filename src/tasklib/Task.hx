@@ -8,13 +8,20 @@ class Task<T> {
 	var _executors:Array<Execute>;
 	var _next:Array<Void -> Void>;
 
-	inline function new(state:State, data:Dynamic) {
+	#if debug
+	var _pos:haxe.PosInfos;
+	#end
+
+	inline function new(state:State, data:Dynamic #if debug , ?pos:haxe.PosInfos #end) {
 		_data = data;
 		_state = state;
 		if(state == State.PENDING) {
 			_executors = [];
 			_next = [];
 		}
+		#if debug
+		_pos = pos;
+		#end
 	}
 
 	public function ifSuccess<R>(continuation:T -> Task<R>, ?execute:Execute):Task<R> {
@@ -156,12 +163,16 @@ class Task<T> {
 	}
 
 	public function toString() {
-		return switch(_state) {
+		var str = switch(_state) {
 			case State.PENDING: 'Task(Pending)';
 			case State.FAILED: 'Task(Failed(${Std.string(_data)}))';
 			case State.SUCCESS: 'Task(Success(${Std.string(_data)}))';
 			case State.CANCELLED: 'Task(Cancelled(${Std.string(_data)}))';
 		};
+		#if debug
+		str += " >> " + _pos.fileName + ":" + _pos.lineNumber;
+		#end
+		return str;
 	}
 
 	function addContinuation<R>(resultTask:Task<R>, executor:Execute, future:Void -> Void):Task<R> {
@@ -241,17 +252,19 @@ class Task<T> {
 	public static function waitAll(list:Array<Task<Dynamic>>):Task<Nothing> {
 		var trigger = new Trigger<Nothing>();
 		var total = list.length;
-		for(i in 0...list.length) {
-			list[i].thenTask(function(_) {
-				--total;
-				if(total <= 0) {
-					trigger.resolve(null);
-				}
-				return null;
-			});
-		}
 		if(total == 0) {
 			trigger.resolve(null);
+		}
+		else {
+			for(i in 0...list.length) {
+				list[i].thenTask(function(_) {
+					--total;
+					if(total <= 0) {
+						trigger.resolve(null);
+					}
+					return null;
+				});
+			}
 		}
 		return trigger.task;
 	}
