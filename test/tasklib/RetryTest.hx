@@ -16,6 +16,7 @@ class RetryTest {
 			return outRandom(0.1);
 		}, 5)
 		.ifSuccess(function(_) {
+			Assert.pass("yeah");
 			done();
 			return null;
 		});
@@ -30,6 +31,7 @@ class RetryTest {
 			return outRandomAsync(1);
 		}, 5)
 		.ifError(function(_) {
+			Assert.pass("yeah");
 			done();
 			return null;
 		});
@@ -44,7 +46,7 @@ class RetryTest {
 	public function outRandomAsync(failRate:Float = 0.5):Task<Int> {
 		var trigger = new Trigger<Int>();
 
-		Timer.delay(function() {
+		function d0() {
 			var value = Std.int(1000 * Math.random());
 			var failed = Math.random() < failRate;
 			if (failed) {
@@ -53,7 +55,13 @@ class RetryTest {
 			else {
 				trigger.resolve(value);
 			}
-		}, 2);
+		}
+
+		#if (flash||js)
+		haxe.Timer.delay(d0, 2);
+		#else
+		d0();
+		#end
 
 		return trigger.task;
 	}
