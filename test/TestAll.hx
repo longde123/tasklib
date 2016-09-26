@@ -1,6 +1,4 @@
-import tasklib.RetryTest;
-import tasklib.ParseIntTest;
-import tasklib.TaskTest;
+package ;
 
 import utest.Runner;
 import utest.TestResult;
@@ -9,9 +7,9 @@ import utest.ui.Report;
 class TestAll {
 
 	public static function addTests(runner:Runner) {
-		runner.addCase(new TaskTest());
-		runner.addCase(new ParseIntTest());
-		runner.addCase(new RetryTest());
+		runner.addCase(new tasklib.TaskTest());
+		runner.addCase(new tasklib.ParseIntTest());
+		runner.addCase(new tasklib.RetryTest());
 	}
 
 	public static function main() {
