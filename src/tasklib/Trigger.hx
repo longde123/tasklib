@@ -6,7 +6,7 @@ abstract Trigger<T>(Task<T>) {
 	public var task(get, never):Task<T>;
 
 	inline public function new() {
-		this = new Task<T>(null, State.PENDING);
+		this = new Task<T>(State.PENDING, null);
 	}
 
 	public function resolve(result:T) {
@@ -33,7 +33,7 @@ abstract Trigger<T>(Task<T>) {
 		this.continueExecution();
 	}
 
-	function resolveFrom(task:Task<T>):Task<Nothing> {
+	function resolveFrom<TPrev>(task:Task<TPrev>):Task<Nothing> {
 		if(task == null) {
 			resolve(null);
 		}
@@ -46,7 +46,7 @@ abstract Trigger<T>(Task<T>) {
 		return null;
 	}
 
-	function pipeFrom(task:Task<T>) {
+	function pipeFrom<TPrev>(task:Task<TPrev>) {
 		if(task == null) {
 			resolve(null);
 		}

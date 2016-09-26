@@ -8,7 +8,7 @@ class Task<T> {
 	var _executors:Array<Execute>;
 	var _next:Array<Void -> Void>;
 
-	function new(data:Dynamic, state:State) {
+	inline function new(state:State, data:Dynamic) {
 		_data = data;
 		_state = state;
 		if(state == State.PENDING) {
@@ -72,11 +72,12 @@ class Task<T> {
 		var trigger = new Trigger<R>();
 
 		function future() {
-			trigger.pipeFrom(
-				_state == State.SUCCESS ?
-				Task.forResult(continuation(cast _data)) :
-				cast this
-			);
+			if(_state == State.SUCCESS) {
+				trigger.pipeFrom(Task.forResult(continuation(cast _data)));
+			}
+			else {
+				trigger.pipeFrom(this);
+			}
 		}
 
 		return addContinuation(trigger.task, execute, future);
@@ -139,28 +140,28 @@ class Task<T> {
 		});
 	}
 
-	public static function forResult<T>(result:T):Task<T> {
-		return new Task<T>(result, State.SUCCESS);
+	inline public static function forResult<T>(result:Null<T>):Task<T> {
+		return new Task<T>(State.SUCCESS, result);
 	}
 
-	public static function forError<T>(error:Dynamic):Task<T> {
-		return new Task<T>(error, State.FAILED);
+	inline public static function forError<T>(error:Dynamic):Task<T> {
+		return new Task<T>(State.FAILED, error);
 	}
 
-	public static function cancelled<T>(reason:String):Task<T> {
-		return new Task<T>(reason, State.CANCELLED);
+	inline public static function cancelled<T>(reason:String):Task<T> {
+		return new Task<T>(State.CANCELLED, reason);
 	}
 
-	public static function nothing():Task<Nothing> {
-		return new Task<Nothing>(null, State.SUCCESS);
+	inline public static function nothing():Task<Nothing> {
+		return new Task<Nothing>(State.SUCCESS, null);
 	}
 
 	public function toString() {
 		return switch(_state) {
 			case State.PENDING: 'Task(Pending)';
-			case State.FAILED: 'Task(Failed($error))';
-			case State.SUCCESS: 'Task(Success(${Std.string(result)}))';
-			case State.CANCELLED: 'Task(Cancelled($error))';
+			case State.FAILED: 'Task(Failed(${Std.string(_data)}))';
+			case State.SUCCESS: 'Task(Success(${Std.string(_data)}))';
+			case State.CANCELLED: 'Task(Cancelled(${Std.string(_data)}))';
 		};
 	}
 
@@ -231,7 +232,7 @@ class Task<T> {
 			haxe.Timer.delay(trigger.pipeFrom.bind(this), Std.int(seconds * 1000));
 		}
 
-		return addContinuation(trigger, Execute.IMMEDIATELY, future);
+		return addContinuation(trigger.task, Execute.IMMEDIATELY, future);
 	}
 
 	public static function waitAll(list:Array<Task<Dynamic>>):Task<Nothing> {

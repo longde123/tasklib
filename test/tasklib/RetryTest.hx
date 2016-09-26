@@ -4,6 +4,7 @@ import haxe.Timer;
 import utest.Assert;
 
 class RetryTest {
+	
 	public function new() {}
 
 	public function testRetry() {

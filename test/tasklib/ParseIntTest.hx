@@ -75,9 +75,10 @@ class ParseIntTest {
 
 	static public function parseInt(string:String):Task<Int> {
 		var value = Std.parseInt(string);
-		return value == null ?
-		Task.forError('Cannot parse Int: $string') :
-		Task.forResult(value);
+		if(value == null) {
+			return Task.forError('Cannot parse Int: $string');
+		}
+		return Task.forResult(value);
 	}
 
 	static public function ensureStringValue(string:String):Task<String> {
