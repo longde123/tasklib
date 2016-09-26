@@ -1,0 +1,20 @@
+{
+	"name": "tasklib",
+	"license": "MIT",
+	"tags": [
+		"continuation",
+		"async",
+		"task",
+		"cross",
+		"lightweight",
+		"common"
+	],
+	"classPath": "src",
+	"description": "Slim task-based programming",
+	"contributors": [
+		"eliasku"
+	],
+	"releasenote": "Initial release",
+	"version": "0.0.1",
+	"url": "https://github.com/eliasku/tasklib"
+}
