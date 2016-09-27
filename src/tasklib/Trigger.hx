@@ -33,25 +33,34 @@ abstract Trigger<T>(Task<T>) {
 		this.continueExecution();
 	}
 
-	function resolveFrom<TPrev>(task:Task<TPrev>):Task<Nothing> {
-		if(task == null) {
-			resolve(null);
-		}
-		else if(task._state == State.PENDING) throw "Task should be completed: " + this.toString();
-		else {
-			this._state = task._state;
-			this._data = task._data;
-			this.continueExecution();
-		}
-		return null;
+	function resolveFrom(task:Task<T>) {
+		if(task._state == State.PENDING) throw "Task should be completed: " + this.toString();
+
+		#if tasklib_trace
+		trace("Trigger resolving from task: " + task.toString());
+		#end
+
+		this._state = task._state;
+		this._data = task._data;
+		#if debug
+		this._pos = task._pos;
+		#end
+
+		this.continueExecution();
 	}
 
-	function pipeFrom<TPrev>(task:Task<TPrev>) {
-		if(task == null) {
-			resolve(null);
+	function fire(task:Task<T>) {
+		if(task != null) {
+			#if tasklib_trace
+			trace("Trigger fire continuation: " + task.toString());
+			#end
+			task.addContinuation(null, Execute.IMMEDIATELY, resolveFrom);
 		}
 		else {
-			task.thenTask(resolveFrom);
+			#if tasklib_trace
+			trace("Trigger fired NULL immediatelly");
+			#end
+			resolve(null);
 		}
 	}
 

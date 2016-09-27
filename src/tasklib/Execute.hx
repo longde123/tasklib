@@ -6,7 +6,7 @@ class Execute {
 
 	public function new() {}
 
-	public function run(func:Void -> Void) {
-		func();
+	public function run<T>(func:Task<T> -> Void, task:Task<T>) {
+		func(task);
 	}
 }

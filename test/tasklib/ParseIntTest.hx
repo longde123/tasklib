@@ -19,12 +19,12 @@ class ParseIntTest {
 		trigger.task
 		.pipe(ensureStringValue)
 		.pipe(parseInt)
-		.thenTask(traceResult)
-		.ifSuccess(function(x:Int) {
+		.thenTask(traceTask)
+		.ifSuccess(function(x) {
 			actual = x;
 			return Task.forResult(x);
 		})
-		.thenTask(function(_) {
+		.thenTask(function(t) {
 			done();
 			return null;
 		});
@@ -68,12 +68,12 @@ class ParseIntTest {
 		});
 	}
 
-	static function traceResult<T>(task:Task<T>):Task<T> {
+	static function traceTask<T>(task:Task<T>):Task<T> {
 		trace(task.toString());
 		return task;
 	}
 
-	static public function parseInt(string:String):Task<Int> {
+	static public function parseInt(string:String):Task<IntObject> {
 		var value = Std.parseInt(string);
 		if(value == null) {
 			return Task.forError('Cannot parse Int: $string');
@@ -87,9 +87,11 @@ class ParseIntTest {
 		Task.forError("Empty string");
 	}
 
-	static public function parseIntAsync(text:String):Task<Int> {
+	static public function parseIntAsync(text:String):Task<IntObject> {
 		return Task.forResult(text)
 			.pipe(ensureStringValue)
 			.pipe(parseInt);
 	}
 }
+
+typedef IntObject = Null<Int>;

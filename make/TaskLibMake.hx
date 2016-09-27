@@ -30,8 +30,8 @@ class TaskLibMake extends hxmake.Module {
 		});
 
 		var testTask = new TestTask();
-		//TODO: cs
-		testTask.targets = ["neko", "swf", "js", "cpp", "java", "php", "node"];
+		testTask.debug = true;
+		testTask.targets = ["neko", "swf", "js", "cpp", "java", "php", "node", "cs"];
 		testTask.libraries = ["tasklib"];
 		task("test", testTask);
 	}

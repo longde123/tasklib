@@ -6,21 +6,24 @@ class Task<T> {
 	var _state:State;
 	var _data:Dynamic;
 	var _executors:Array<Execute>;
-	var _next:Array<Void -> Void>;
+	var _next:Array<Task<T> -> Void>;
 
 	#if debug
 	var _pos:haxe.PosInfos;
+	var _uid:Int = 0;
+	static var NEXT_UID:Int = 0;
 	#end
 
-	inline function new(state:State, data:Dynamic #if debug , ?pos:haxe.PosInfos #end) {
-		_data = data;
+	inline function new(state:State, data:Dynamic #if debug, ?pos:haxe.PosInfos #end) {
 		_state = state;
-		if(state == State.PENDING) {
+		_data = data;
+		if (state == State.PENDING) {
 			_executors = [];
 			_next = [];
 		}
 		#if debug
 		_pos = pos;
+		_uid = ++NEXT_UID;
 		#end
 	}
 
@@ -29,9 +32,9 @@ class Task<T> {
 
 		var trigger = new Trigger<R>();
 
-		function future() {
-			if (_state == State.SUCCESS) {
-				trigger.pipeFrom(continuation(cast _data));
+		function future(source:Task<T>) {
+			if (source._state == State.SUCCESS) {
+				trigger.fire(continuation(source.__unsafeResult()));
 			}
 		}
 
@@ -43,9 +46,9 @@ class Task<T> {
 
 		var trigger = new Trigger<R>();
 
-		function future() {
-			if (_state == State.FAILED) {
-				trigger.pipeFrom(continuation(_data));
+		function future(source:Task<T>) {
+			if (source._state == State.FAILED) {
+				trigger.fire(continuation(source._data));
 			}
 		}
 
@@ -55,16 +58,22 @@ class Task<T> {
 	/**
 		Full handle: Task -> Task
 	**/
-	public function thenTask<R>(continuation:Task<T> -> Task<R>, ?execute:Execute):Task<R> {
+
+	public function thenTask<R>(continuation:Task<T> -> Task<R>, ?execute:Execute #if debug, ?pos:haxe.PosInfos #end):Task<R> {
 		if (continuation == null) throw "null argument";
 
-		var trigger = new Trigger<R>();
+		var trigger = new Trigger<R>(#if debug pos #end);
 
-		function future() {
-			trigger.pipeFrom(continuation(this));
-		}
-
-		return addContinuation(trigger.task, execute, future);
+		return addContinuation(
+			trigger.task,
+			execute,
+			function(source:Task<T>) {
+				#if tasklib_trace
+				trace("thenTask future: " + source.toString());
+				#end
+				trigger.fire(continuation(source));
+			}
+		);
 	}
 
 	/**
@@ -77,13 +86,8 @@ class Task<T> {
 
 		var trigger = new Trigger<R>();
 
-		function future() {
-			if(_state == State.SUCCESS) {
-				trigger.pipeFrom(Task.forResult(continuation(cast _data)));
-			}
-			else {
-				trigger.pipeFrom(this);
-			}
+		function future(source:Task<T>) {
+			trigger.fire(source._state == State.SUCCESS ? Task.forResult(continuation(source.__unsafeResult())) : (cast source));
 		}
 
 		return addContinuation(trigger.task, execute, future);
@@ -94,20 +98,22 @@ class Task<T> {
 		Failed(e) -> Failed(e)
 	**/
 
-	public function pipe<R>(continuation:T -> Task<R>, ?execute:Execute):Task<R> {
+	public function pipe<R>(continuation:T -> Task<R>, ?execute:Execute #if debug, ?pos:haxe.PosInfos #end):Task<R> {
 		if (continuation == null) throw "null argument";
 
-		var trigger = new Trigger<R>();
+		var trigger = new Trigger<R>(#if debug pos #end);
+		var self = this;
 
-		function future() {
-			trigger.pipeFrom(
-				_state == State.SUCCESS ?
-				continuation(cast _data) :
-				cast this
-			);
-		}
-
-		return addContinuation(trigger.task, execute, future);
+		return addContinuation(
+			trigger.task,
+			execute,
+			function(source:Task<T>) {
+				#if tasklib_trace
+				trace("pipe future: " + source.toString());
+				#end
+				trigger.fire(source._state == State.SUCCESS ? continuation(source.__unsafeResult()) : (cast source));
+			}
+		);
 	}
 
 	/**
@@ -121,11 +127,9 @@ class Task<T> {
 
 		var trigger = new Trigger<T>();
 
-		function future() {
-			trigger.pipeFrom(
-				_state == State.FAILED ?
-				Task.forResult(continuation(_data)) :
-				this
+		function future(source:Task<T>) {
+			trigger.fire(
+				source._state == State.FAILED ? Task.forResult(continuation(source._data)) : source
 			);
 		}
 
@@ -136,30 +140,31 @@ class Task<T> {
 		Add side-callback for success result
 		Returns current Task
 	**/
+
 	public function tap(callback:T -> Void, ?execute:Execute):Task<T> {
 		if (callback == null) throw "null argument";
 
-		return addContinuation(this, execute, function() {
-			if(_state == State.SUCCESS) {
-				callback(cast _data);
+		return addContinuation(this, execute, function(source:Task<T>) {
+			if (source._state == State.SUCCESS) {
+				callback(source.__unsafeResult());
 			}
 		});
 	}
 
-	inline public static function forResult<T>(result:Null<T>):Task<T> {
-		return new Task<T>(State.SUCCESS, result);
+	inline public static function forResult<T>(result:T #if debug, ?pos:haxe.PosInfos #end):Task<T> {
+		return new Task<T>(State.SUCCESS, result #if debug, pos #end);
 	}
 
-	inline public static function forError<T>(error:Dynamic):Task<T> {
-		return new Task<T>(State.FAILED, error);
+	inline public static function forError<T>(error:Dynamic #if debug, ?pos:haxe.PosInfos #end):Task<T> {
+		return new Task<T>(State.FAILED, error #if debug, pos #end);
 	}
 
-	inline public static function cancelled<T>(reason:String):Task<T> {
-		return new Task<T>(State.CANCELLED, reason);
+	inline public static function cancelled<T>(reason:String #if debug, ?pos:haxe.PosInfos #end):Task<T> {
+		return new Task<T>(State.CANCELLED, reason #if debug, pos #end);
 	}
 
-	inline public static function nothing():Task<Nothing> {
-		return new Task<Nothing>(State.SUCCESS, null);
+	inline public static function nothing(#if debug ?pos:haxe.PosInfos #end):Task<Nothing> {
+		return new Task<Nothing>(State.SUCCESS, null #if debug, pos #end);
 	}
 
 	public function toString() {
@@ -170,12 +175,12 @@ class Task<T> {
 			case State.CANCELLED: 'Task(Cancelled(${Std.string(_data)}))';
 		};
 		#if debug
-		str += " >> " + _pos.fileName + ":" + _pos.lineNumber;
+		str += "#" + _uid + " >> " + _pos.fileName + ":" + _pos.lineNumber + " " + _pos.methodName;
 		#end
 		return str;
 	}
 
-	function addContinuation<R>(resultTask:Task<R>, executor:Execute, future:Void -> Void):Task<R> {
+	function addContinuation<R>(resultTask:Task<R>, executor:Execute, future:Task<T> -> Void):Task<R> {
 		if (executor == null) {
 			executor = Execute.IMMEDIATELY;
 		}
@@ -185,33 +190,39 @@ class Task<T> {
 			_next.push(future);
 		}
 		else {
-			executor.run(future);
+			executor.run(future, this);
 		}
 
 		return resultTask;
 	}
 
 	function continueExecution() {
+		#if tasklib_trace
+		trace('Continuation: ${toString()}');
+		#end
 		for (i in 0..._executors.length) {
-			_executors[i].run(_next[i]);
+			#if tasklib_trace
+			trace('C. #$i');
+			#end
+			_executors[i].run(_next[i], this);
 		}
 		_next = null;
 		_executors = null;
 	}
 
 	public function getResult():T {
-		if(_state != State.SUCCESS) throw "Cannot get result from task: " + toString();
-		return cast _data;
+		if (_state != State.SUCCESS) throw "Cannot get result from task: " + toString();
+		return __unsafeResult();
 	}
 
 	public function getError():Dynamic {
-		if(_state != State.FAILED) throw "Cannot get error from task: " + toString();
+		if (_state != State.FAILED) throw "Cannot get error from task: " + toString();
 		return _data;
 	}
 
 	public function getCancelledReason():String {
-		if(_state != State.CANCELLED) throw "Cannot get cancelled reason from task: " + toString();
-		return cast _data;
+		if (_state != State.CANCELLED) throw "Cannot get cancelled reason from task: " + toString();
+		return Std.string(_data);
 	}
 
 	public static function retry<T>(block:Void -> Task<T>, count:Int = 5):Task<T> {
@@ -227,7 +238,7 @@ class Task<T> {
 				retryBody(block, trigger, count - 1);
 			}
 			else {
-				trigger.pipeFrom(resultTask);
+				trigger.fire(resultTask);
 			}
 			return null;
 		});
@@ -238,11 +249,13 @@ class Task<T> {
 
 		var trigger = new Trigger<T>();
 
-		function future() {
+		function future(source:Task<T>) {
 			#if (flash||js)
-			haxe.Timer.delay(trigger.pipeFrom.bind(this), Std.int(seconds * 1000));
+			haxe.Timer.delay(function() {
+				trigger.fire(source);
+			}, Std.int(seconds * 1000));
 			#else
-			trigger.pipeFrom(this);
+			trigger.fire(source);
 			#end
 		}
 
@@ -252,14 +265,14 @@ class Task<T> {
 	public static function waitAll(list:Array<Task<Dynamic>>):Task<Nothing> {
 		var trigger = new Trigger<Nothing>();
 		var total = list.length;
-		if(total == 0) {
+		if (total == 0) {
 			trigger.resolve(null);
 		}
 		else {
-			for(i in 0...list.length) {
+			for (i in 0...list.length) {
 				list[i].thenTask(function(_) {
 					--total;
-					if(total <= 0) {
+					if (total <= 0) {
 						trigger.resolve(null);
 					}
 					return null;
@@ -267,5 +280,9 @@ class Task<T> {
 			}
 		}
 		return trigger.task;
+	}
+
+	@:extern inline function __unsafeResult():T {
+		return cast _data;
 	}
 }
