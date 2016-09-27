@@ -26,7 +26,7 @@ class TaskLibMake extends hxmake.Module {
 			ext.config.releasenote = "Initial release";
 			ext.config.tags = ["continuation", "async", "task", "cross", "lightweight", "common"];
 
-			ext.pack.includes = ["src", "haxelib.json", "README.md"];
+			ext.pack.includes = ["src", "haxelib.json", "README.md", "LICENSE"];
 		});
 
 		var testTask = new TestTask();
