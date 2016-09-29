@@ -54,7 +54,7 @@ abstract Trigger<T>(Task<T>) {
 			#if tasklib_trace
 			trace("Trigger fire continuation: " + task.toString());
 			#end
-			task.addContinuation(null, Execute.IMMEDIATELY, resolveFrom);
+			task.addContinuation(null, Execute.SYNC, resolveFrom);
 		}
 		else {
 			#if tasklib_trace
