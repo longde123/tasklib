@@ -2,12 +2,9 @@
 	"name": "tasklib",
 	"license": "MIT",
 	"tags": [
-		"continuation",
-		"async",
+		"utility",
 		"task",
-		"cross",
-		"lightweight",
-		"common"
+		"cross"
 	],
 	"classPath": "src",
 	"description": "Slim task-based programming",

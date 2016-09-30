@@ -24,7 +24,7 @@ class TaskLibMake extends hxmake.Module {
 			ext.config.license = "MIT";
 			ext.config.version = "0.0.1";
 			ext.config.releasenote = "Initial release";
-			ext.config.tags = ["continuation", "async", "task", "cross", "lightweight", "common"];
+			ext.config.tags = ["utility", "task", "cross"];
 
 			ext.pack.includes = ["src", "haxelib.json", "README.md", "LICENSE"];
 		});
