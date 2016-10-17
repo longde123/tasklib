@@ -83,12 +83,15 @@ class Task<T> {
 		Failed(e) -> Failed(e)
 	**/
 
-	public function then<R>(continuation:T -> R, ?execute:Executor):Task<R> {
+	public function then<R>(continuation:T -> R, ?execute:Executor #if debug , ?pos:haxe.PosInfos #end):Task<R> {
 		if (continuation == null) throw "null argument";
 
-		var trigger = new Trigger<R>();
+		var trigger = new Trigger<R>(#if debug pos #end);
 
 		function future(source:Task<T>) {
+			#if tasklib_trace
+			trace("then future: " + source.toString());
+			#end
 			trigger.fire(source._state == State.SUCCESS ? Task.forResult(continuation(source.__unsafeResult())) : (cast source));
 		}
 
@@ -104,18 +107,15 @@ class Task<T> {
 		if (continuation == null) throw "null argument";
 
 		var trigger = new Trigger<R>(#if debug pos #end);
-		var self = this;
 
-		return addContinuation(
-			trigger.task,
-			execute,
-			function(source:Task<T>) {
-				#if tasklib_trace
-				trace("pipe future: " + source.toString());
-				#end
-				trigger.fire(source._state == State.SUCCESS ? continuation(source.__unsafeResult()) : (cast source));
-			}
-		);
+		function future(source:Task<T>) {
+			#if tasklib_trace
+			trace("pipe future: " + source.toString());
+			#end
+			trigger.fire(source._state == State.SUCCESS ? continuation(source.__unsafeResult()) : (cast source));
+		};
+
+		return addContinuation(trigger.task, execute, future);
 	}
 
 	/**
@@ -175,6 +175,7 @@ class Task<T> {
 			case State.FAILED: 'Task(Failed(${Std.string(_data)}))';
 			case State.SUCCESS: 'Task(Success(${Std.string(_data)}))';
 			case State.CANCELLED: 'Task(Cancelled(${Std.string(_data)}))';
+			default: throw "Bad task state";
 		};
 		#if debug
 		str += "#" + _uid + " >> " + _pos.fileName + ":" + _pos.lineNumber + " " + _pos.methodName;
@@ -272,7 +273,7 @@ class Task<T> {
 		}
 		else {
 			for (i in 0...list.length) {
-				list[i].thenTask(function(_) {
+				list[i].then(function(_) {
 					--total;
 					if (total <= 0) {
 						trigger.resolve(null);
