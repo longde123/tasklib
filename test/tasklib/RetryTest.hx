@@ -9,14 +9,13 @@ class RetryTest {
 
 	public function testRetry() {
 		var done = Assert.createAsync(function() {
-
+			Assert.pass("yeah");
 		});
 		Task.retry(function() {
 			trace("Try..");
 			return outRandom(0.1);
 		}, 5)
 		.ifSuccess(function(_) {
-			Assert.pass("yeah");
 			done();
 			return null;
 		});
@@ -24,14 +23,13 @@ class RetryTest {
 
 	public function testRetryAsync() {
 		var done = Assert.createAsync(function() {
-
+			Assert.pass("yeah");
 		});
 		Task.retry(function() {
 			trace("Try..");
 			return outRandomAsync(1);
 		}, 5)
 		.ifError(function(_) {
-			Assert.pass("yeah");
 			done();
 			return null;
 		});
@@ -57,11 +55,11 @@ class RetryTest {
 			}
 		}
 
-		#if (flash||js)
-		haxe.Timer.delay(d0, 2);
-		#else
+//		#if (flash||js)
+//		haxe.Timer.delay(d0, 2);
+//		#else
 		d0();
-		#end
+//		#end
 
 		return trigger.task;
 	}
