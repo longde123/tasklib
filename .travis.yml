@@ -24,7 +24,6 @@ env:
     - TARGET=neko
     - TARGET=cs
     - TARGET=java
-    - TARGET=php
 
 matrix:
   allow_failures:
