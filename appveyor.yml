@@ -11,7 +11,7 @@ environment:
     - TARGET: neko
     - TARGET: cs
     - TARGET: java
-    - TARGET: php
+    #- TARGET: php
 
 matrix:
   fast_finish: true
