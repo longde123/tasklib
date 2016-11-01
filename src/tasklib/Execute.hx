@@ -26,6 +26,6 @@ class Execute {
 	}
 
 	static function get_DEFAULT() {
-		return get_TICK();
+		return get_SYNC();
 	}
 }
